@@ -16,6 +16,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type DetectedFace struct {
+	FaceID string
+}
+
+var StoreFaces []DetectedFace
+
+func Init() {
+}
+
 //Remove file extension for renaming process
 func removeExtension(full string) string {
 	extension := filepath.Ext(full)
@@ -62,19 +71,7 @@ func printConsole() {
 }
 
 func main() {
-
-	key := os.Getenv("MSFT_KEY")
-	if key == "" {
-		fmt.Println("Please export your key to environment first, `export MSFT_KEY=12234`")
-		return
-	}
-	f := NewFace(key)
-
-	//Detect
-	ret, err := f.DetectFile(nil, "./1.jpg")
-	fmt.Println("ret:", ret, " err=", err)
-
-	var serverAddr string
+	var key string
 	var verbose bool
 
 	rootCmd := &cobra.Command{
@@ -83,9 +80,12 @@ func main() {
 		Run: func(ccmd *cobra.Command, args []string) {
 
 			toggleLogging(verbose)
+			if key == "" {
+				fmt.Println("Input key is empty, make sure you input key with -k or key")
+				return
+			}
 
-			fmt.Println("Connect to coapmq server:", serverAddr)
-			client := NewClient(serverAddr)
+			client := NewFace(key)
 			if client == nil {
 				fmt.Println("Cannot connect to server, please check your setting.")
 				return
@@ -95,7 +95,7 @@ func main() {
 			printConsole()
 			for !quit {
 
-				var topic, msg string
+				var param1, param2 string
 
 				if !scanner.Scan() {
 					break
@@ -104,16 +104,47 @@ func main() {
 				parts := strings.Split(line, " ")
 				cmd := parts[0]
 				if len(parts) > 1 {
-					topic = parts[1]
+					param1 = parts[1]
 				}
 				if len(parts) > 2 {
-					msg = parts[2]
+					param2 = parts[2]
 				}
 
-				fmt.Println(topic, msg)
+				fmt.Println(param1, param2)
 				//var err error
 				switch cmd {
-				case "D", "d": //CREATE TOPIC
+				case "a", "A", "Add", "add", "ADD": //CREATE face
+					var res []byte
+					var errRsp *ErrorResponse
+					if param1 != "" {
+						if strings.Contains(param1, "http") {
+							res, errRsp = client.DetectUrl(nil, param1)
+						} else {
+							res, errRsp = client.DetectFile(nil, param1)
+						}
+					} else {
+						//Not valid input for param1
+						printConsole()
+						continue
+					}
+
+					if errRsp.Err != nil {
+						fmt.Println("Err:", errRsp.Err)
+						continue
+					}
+
+					gotFaces := NewFaceResponse(res)
+					if gotFaces == nil {
+						fmt.Println("Got error on result :", string(res))
+						continue
+					}
+
+					for _, gotFace := range gotFaces {
+						fmt.Println("New Face:", gotFace)
+						newFace := DetectedFace{}
+						newFace.FaceID = gotFace.Faceid
+						StoreFaces = append(StoreFaces, newFace)
+					}
 
 				case "Q", "q":
 					quit = true
@@ -121,6 +152,10 @@ func main() {
 					verbose = !verbose
 					toggleLogging(verbose)
 					fmt.Println("Switch verbose to ", verbose)
+				case "l", "L", "list", "LIST":
+					for index, face := range StoreFaces {
+						fmt.Println(index, ":", face)
+					}
 				default:
 					fmt.Println("Command not support.")
 				}
@@ -131,7 +166,7 @@ func main() {
 			}
 		},
 	}
-	rootCmd.Flags().StringVarP(&serverAddr, "key", "k", "", "Project Oxford key, please export your key to environment first, `export MSFT_KEY=12234`")
+	rootCmd.Flags().StringVarP(&key, "key", "k", "", "Project Oxford key, please export your key to environment first, `export MSFT_KEY=12234`")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose")
 	rootCmd.Execute()
 }
