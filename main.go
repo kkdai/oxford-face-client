@@ -83,7 +83,7 @@ func toggleLogging(enable bool) {
 }
 
 func printConsole() {
-	fmt.Println("Command:( A:Add Face  R:Remove Face V:Verbose G:Read Q:exit )")
+	fmt.Println("Command:( A:Add Face S:Check Similarity C:Check input two face  V:Verbose G:Read Q:exit )")
 	fmt.Printf(":>")
 }
 
