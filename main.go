@@ -29,6 +29,10 @@ var StoreFaces []DetectedFace
 func Init() {
 }
 
+func validIndex(target int) bool {
+	return target >= 0 && target < len(StoreFaces)
+}
+
 func findStoreFaceIndex(faceid string) int {
 	for index, face := range StoreFaces {
 		if face.FaceID == faceid {
@@ -176,7 +180,7 @@ func main() {
 						continue
 					}
 
-					if target < 0 || target >= len(StoreFaces) {
+					if !validIndex(target) {
 						fmt.Println("Your input number is not exist, current face only has ", len(StoreFaces))
 						continue
 					}
@@ -189,7 +193,6 @@ func main() {
 						targetList = append(targetList, face.FaceID)
 					}
 
-					fmt.Println("List=", targetList)
 					res, errRsp := client.FindSimilarFromList(StoreFaces[target].FaceID, targetList, 20)
 
 					if errRsp != nil {
@@ -197,7 +200,6 @@ func main() {
 						continue
 					}
 
-					fmt.Println("Res=>", string(res))
 					simRes := NewSimilarResponse(res)
 					if simRes == nil {
 						fmt.Println("Result is not valid, ", simRes)
@@ -206,6 +208,37 @@ func main() {
 					for _, similar := range simRes {
 						fmt.Println("Most similar in index:", findStoreFaceIndex(similar.Faceid), " faceid: ", similar.Faceid, " confidence: ", similar.Confidence)
 					}
+
+				case "C", "c": //check verify the two face if identical
+					if param1 == "" || param2 == "" {
+						printConsole()
+						continue
+					}
+					f1, err := strconv.Atoi(param1)
+					if err != nil {
+						fmt.Println("Input index must be integer, you inpiut ", param1)
+						continue
+					}
+
+					f2, err := strconv.Atoi(param2)
+					if err != nil {
+						fmt.Println("Input index must be integer, you inpiut ", param2)
+						continue
+					}
+
+					if !validIndex(f1) || !validIndex(f2) {
+						fmt.Println("Input param index is not valid p1:", f1, " p2:", f2)
+						continue
+					}
+
+					res, errRsp := client.VerifyWithFace(StoreFaces[f1].FaceID, StoreFaces[f2].FaceID)
+					if errRsp != nil {
+						fmt.Println("Err:", errRsp.Err)
+						continue
+					}
+
+					result := NewVerifyResponse(res)
+					fmt.Println("Is identical?", result.IsIdentical, " confidence:", result.Confidence)
 
 				case "Q", "q":
 					quit = true
