@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	. "github.com/kkdai/oxford-face"
@@ -17,7 +18,10 @@ import (
 )
 
 type DetectedFace struct {
+	//Store the image face ID from Face API
 	FaceID string
+	//Store the image address, it could be URL or fil path
+	From string
 }
 
 var StoreFaces []DetectedFace
@@ -110,25 +114,26 @@ func main() {
 					param2 = parts[2]
 				}
 
-				fmt.Println(param1, param2)
-				//var err error
+				var res []byte
+				var errRsp *ErrorResponse
+
+				log.Println("Input params:", param1, param2)
+
 				switch cmd {
-				case "a", "A", "Add", "add", "ADD": //CREATE face
-					var res []byte
-					var errRsp *ErrorResponse
-					if param1 != "" {
-						if strings.Contains(param1, "http") {
-							res, errRsp = client.DetectUrl(nil, param1)
-						} else {
-							res, errRsp = client.DetectFile(nil, param1)
-						}
-					} else {
+				case "a", "A", "Add", "add", "ADD": //Add image to detect and add face in our temp list
+					if param1 == "" {
 						//Not valid input for param1
 						printConsole()
 						continue
 					}
 
-					if errRsp.Err != nil {
+					if strings.Contains(param1, "http") {
+						res, errRsp = client.DetectUrl(nil, param1)
+					} else {
+						res, errRsp = client.DetectFile(nil, param1)
+					}
+
+					if errRsp != nil {
 						fmt.Println("Err:", errRsp.Err)
 						continue
 					}
@@ -140,10 +145,56 @@ func main() {
 					}
 
 					for _, gotFace := range gotFaces {
-						fmt.Println("New Face:", gotFace)
+						log.Println("New Face: obj=", gotFace)
 						newFace := DetectedFace{}
 						newFace.FaceID = gotFace.Faceid
+						newFace.From = param1
 						StoreFaces = append(StoreFaces, newFace)
+						fmt.Println("New Face: id=", newFace.FaceID)
+					}
+				case "S", "s": //similarity comparison
+					//param1 the taarget index face to similarity compare
+					//ex: s 1  // index=1 face will compare to all exist face in our list
+
+					if param1 == "" {
+						printConsole()
+						continue
+					}
+
+					target, err := strconv.Atoi(param1)
+					if err != nil {
+						fmt.Println("Input index must be integer, you inpiut ", param1)
+						continue
+					}
+
+					if target < 0 || target >= len(StoreFaces) {
+						fmt.Println("Your input number is not exist, current face only has ", len(StoreFaces))
+						continue
+					}
+
+					var targetList []string
+					for index, face := range StoreFaces {
+						if index == target {
+							continue
+						}
+						targetList = append(targetList, face.FaceID)
+					}
+
+					fmt.Println("List=", targetList)
+					res, errRsp := client.FindSimilarFromList(StoreFaces[target].FaceID, targetList, 20)
+
+					if errRsp != nil {
+						fmt.Println("Err:", errRsp.Err)
+						continue
+					}
+
+					simRes := NewSimilarResponse(res)
+					if simRes == nil {
+						fmt.Println("Result is not valid, ", simRes)
+						continue
+					}
+					for _, similar := range simRes {
+						fmt.Println("Most similar is ", similar.Faceid, " confidence: ", similar.Confidence)
 					}
 
 				case "Q", "q":
@@ -153,8 +204,10 @@ func main() {
 					toggleLogging(verbose)
 					fmt.Println("Switch verbose to ", verbose)
 				case "l", "L", "list", "LIST":
+					fmt.Printf("Index \t| Face ID \t\t| From\n")
+					fmt.Printf("===============================================================\n")
 					for index, face := range StoreFaces {
-						fmt.Println(index, ":", face)
+						fmt.Printf("%d \t %s \t %s \n", index, face.FaceID, face.From)
 					}
 				default:
 					fmt.Println("Command not support.")
