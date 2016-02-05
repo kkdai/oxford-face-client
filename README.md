@@ -9,6 +9,11 @@ It is a simple client to help you to maniplate the [Project Oxford](https://www.
 Feature
 --------------
 
+- Easy to add face on URL or file path.
+- List all face you input with source.
+- Easy to compare face similarity using index not face ID.
+- Easy to verify face using index not face ID.
+
 
 Install
 --------------
