@@ -55,7 +55,7 @@ Examples
 ---------------
 
 ```
-Command:( A:Add Face  R:Remove Face V:Verbose G:Read Q:exit )
+Command:( A:Add Face S:Check Similarity C:Check input two face  V:Verbose G:Read Q:exit)
 
 // Add first image from URL
 :>a https://oxfordportal.blob.core.windows.net/face/demov1/verification1-1.jpg
