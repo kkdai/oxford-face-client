@@ -29,6 +29,15 @@ var StoreFaces []DetectedFace
 func Init() {
 }
 
+func findStoreFaceIndex(faceid string) int {
+	for index, face := range StoreFaces {
+		if face.FaceID == faceid {
+			return index
+		}
+	}
+	return -1
+}
+
 //Remove file extension for renaming process
 func removeExtension(full string) string {
 	extension := filepath.Ext(full)
@@ -188,13 +197,14 @@ func main() {
 						continue
 					}
 
+					fmt.Println("Res=>", string(res))
 					simRes := NewSimilarResponse(res)
 					if simRes == nil {
 						fmt.Println("Result is not valid, ", simRes)
 						continue
 					}
 					for _, similar := range simRes {
-						fmt.Println("Most similar is ", similar.Faceid, " confidence: ", similar.Confidence)
+						fmt.Println("Most similar in index:", findStoreFaceIndex(similar.Faceid), " faceid: ", similar.Faceid, " confidence: ", similar.Confidence)
 					}
 
 				case "Q", "q":
