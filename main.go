@@ -66,7 +66,7 @@ func toggleLogging(enable bool) {
 }
 
 func printConsole() {
-	fmt.Println("Command:( C:Create S:Subscription P:Publish R:RemoveTopic V:Verbose G:Read Q:exit )")
+	fmt.Println("Command:( A:Add Face  R:Remove Face V:Verbose G:Read Q:exit )")
 	fmt.Printf(":>")
 }
 
